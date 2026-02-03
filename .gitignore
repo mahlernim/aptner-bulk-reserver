@@ -1,0 +1,29 @@
+# Environment variables (contains credentials)
+.env
+
+# Saved car history (user-specific data)
+car_history.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+_temp_*
+_inspect_*
