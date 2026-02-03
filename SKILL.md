@@ -103,10 +103,3 @@ while current <= end_date:
             print(f"Reserved: {current}")
     current += timedelta(days=1)
 ```
-
-## GUI Application
-
-For interactive use, run:
-```bash
-python aptner_gui.py
-```
