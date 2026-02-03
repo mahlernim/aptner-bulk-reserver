@@ -125,6 +125,18 @@ aptner-bulk-reserver/
 
 - API 구현은 [af950833/aptner](https://github.com/af950833/aptner) Home Assistant 컴포넌트를 참고했습니다. (af님 감사합니다!)
 
+## AI 에이전트 연동
+
+AI 에이전트(Claude, GPT 등)에서 이 기능을 사용하려면:
+
+1. 에이전트에게 아래 스킬 파일을 참고하도록 지시:
+   ```
+   https://raw.githubusercontent.com/mahlernim/aptner-bulk-reserver/main/SKILL.md
+   ```
+2. `.env` 파일 또는 환경변수에 `APTNER_ID`와 `APTNER_PW` 설정
+
+자세한 API 사용법은 [SKILL.md](SKILL.md)를 참조하세요.
+
 ## 작성자
 
 [@mahlernim](https://github.com/mahlernim)
