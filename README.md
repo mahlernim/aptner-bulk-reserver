@@ -127,7 +127,7 @@ aptner-bulk-reserver/
 
 ## AI 에이전트 연동
 
-AI 에이전트(Claude, GPT 등)에서 이 기능을 사용하려면:
+AI 에이전트(OpenClaw 등)에서 이 기능을 사용하려면:
 
 1. 에이전트에게 아래 스킬 파일을 참고하도록 지시:
    ```
@@ -136,6 +136,7 @@ AI 에이전트(Claude, GPT 등)에서 이 기능을 사용하려면:
 2. `.env` 파일 또는 환경변수에 `APTNER_ID`와 `APTNER_PW` 설정
 
 자세한 API 사용법은 [SKILL.md](SKILL.md)를 참조하세요.
+(아이디와 비밀번호를 저장해야 하기 때문에 보안에 신경써야 합니다!)
 
 ## 작성자
 
@@ -144,3 +145,4 @@ AI 에이전트(Claude, GPT 등)에서 이 기능을 사용하려면:
 ## 라이선스
 
 MIT License
+
