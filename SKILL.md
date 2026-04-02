@@ -1,15 +1,18 @@
 ---
 name: aptner-visitor-reservation
-description: |
-  Register visitor vehicle parking reservations on Aptner (아파트너) apartment management system.
-  Use this skill when: user wants to register visitor cars, create recurring parking reservations,
-  check existing reservations, or delete parking reservations for their apartment.
-  Requires: APTNER_ID and APTNER_PW credentials (in .env file or provided by user).
+description: "Register visitor vehicle parking reservations on Aptner (아파트너) apartment management system. Use this skill when: user wants to register visitor cars, create recurring parking reservations, check existing reservations, or delete parking reservations for their apartment. Requires: APTNER_ID and APTNER_PW credentials (in .env file or provided by user)."
 ---
 
 # Aptner Visitor Vehicle Reservation Skill
 
 Register and manage visitor vehicle parking reservations on Aptner-enabled Korean apartments.
+
+## Workflow
+
+1. **Authenticate** — obtain access token using `APTNER_ID` and `APTNER_PW`
+2. **Check existing** — list current reservations to avoid duplicates
+3. **Create or delete** — register new reservations or remove existing ones
+4. **Verify** — confirm changes by re-listing reservations
 
 ## Prerequisites
 
@@ -17,116 +20,9 @@ Register and manage visitor vehicle parking reservations on Aptner-enabled Korea
 - Dependencies: `pip install python-dotenv pyyaml requests`
 - Credentials: `.env` file with `APTNER_ID` and `APTNER_PW`, or get from user
 
----
-
-## Raw HTTP API Reference
-
-**Base URL:** `https://v2.aptner.com`
-
-### Authentication
-
-**Endpoint:** `POST /auth/token`
-
-**Request:**
-```json
-{
-  "id": "user_aptner_id",
-  "password": "user_password"
-}
-```
-
-**Response:**
-```json
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIs..."
-}
-```
-
-**Usage:** Include token in all subsequent requests:
-```
-Authorization: Bearer {accessToken}
-```
-
----
-
-### List Reservations
-
-**Endpoint:** `GET /pc/reserves?pg={page_number}`
-
-**Headers:**
-```
-Authorization: Bearer {token}
-Content-Type: application/json
-```
-
-**Response:**
-```json
-{
-  "totalPages": 1,
-  "reserveList": [
-    {
-      "visitReserveIdx": 124209094,
-      "carNo": "12가3456",
-      "phone": "01012345678",
-      "visitDate": "2026.02.10",
-      "purpose": "과외/수업",
-      "days": 1,
-      "isValid": true
-    }
-  ]
-}
-```
-
----
-
-### Create Reservation
-
-**Endpoint:** `POST /pc/reserve/`
-
-**Headers:**
-```
-Authorization: Bearer {token}
-Content-Type: application/json
-```
-
-**Request:**
-```json
-{
-  "carNo": "12가3456",
-  "visitDate": "2026.02.10",
-  "phone": "01012345678",
-  "purpose": "지인/가족방문",
-  "days": 1
-}
-```
-
-**Parameters:**
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| carNo | string | Yes | License plate number (Korean format) |
-| visitDate | string | Yes | Format: `YYYY.MM.DD` |
-| phone | string | Yes | Phone number (no dashes) |
-| purpose | string | Yes | One of: `지인/가족방문`, `과외/수업`, `돌봄도우미(청소)`, `기타` |
-| days | int | No | Duration, 1-30 (default: 1) |
-
----
-
-### Delete Reservation
-
-**Endpoint:** `DELETE /pc/reserve/{visitReserveIdx}`
-
-**Headers:**
-```
-Authorization: Bearer {token}
-```
-
-**Response:** Empty on success (HTTP 200)
-
----
-
 ## Python Client Usage
 
-The repository includes a Python client (`aptner_api.py`) that wraps these endpoints:
+The repository includes a Python client (`aptner_api.py`) that wraps the Aptner v2 API. For the raw HTTP API details, see [references/raw-api.md](references/raw-api.md).
 
 ### Initialize Client
 
@@ -170,6 +66,8 @@ client.reserve_car(
 )
 ```
 
+**Valid purpose values:** `지인/가족방문`, `과외/수업`, `돌봄도우미(청소)`, `기타`
+
 ### Delete Reservation
 
 ```python
@@ -184,13 +82,11 @@ reserved = client.get_reserved_dates(car_no="12가3456")
 # Returns: set of (carNo, date) tuples already reserved
 ```
 
----
-
 ## Example: Recurring Weekly Reservation
 
 ```python
 from datetime import date, timedelta
-from aptner_api import create_client_from_env
+from aptner_api import create_client_from_env, AptnerAuthError, AptnerError
 
 client = create_client_from_env()
 client.authenticate()
@@ -208,21 +104,34 @@ current = today
 while current <= end_date:
     if current.weekday() in target_weekdays:
         if (car_no, current) not in reserved:
-            client.reserve_car(
-                car_no=car_no,
-                visit_date=current,
-                phone=phone,
-                purpose="과외/수업"
-            )
-            print(f"Reserved: {current}")
+            try:
+                client.reserve_car(
+                    car_no=car_no,
+                    visit_date=current,
+                    phone=phone,
+                    purpose="과외/수업"
+                )
+                print(f"Reserved: {current}")
+            except AptnerAuthError:
+                # Token expired mid-batch — re-authenticate and retry
+                client.authenticate()
+                client.reserve_car(
+                    car_no=car_no,
+                    visit_date=current,
+                    phone=phone,
+                    purpose="과외/수업"
+                )
+                print(f"Reserved (after re-auth): {current}")
+            except AptnerError as e:
+                print(f"Failed to reserve {current}: {e}")
     current += timedelta(days=1)
 ```
 
----
-
 ## Error Handling
 
-- **401 Unauthorized:** Token expired, re-authenticate
-- **400 Bad Request:** Invalid parameters (check date format, purpose value)
-- **AptnerAuthError:** Authentication failed (wrong credentials)
-- **AptnerError:** General API error
+| Error | Cause | Recovery |
+|-------|-------|----------|
+| `AptnerAuthError` | Wrong credentials or expired token | Verify credentials; call `client.authenticate()` again |
+| `AptnerError` | General API error | Check parameters (date format `YYYY.MM.DD`, valid purpose) |
+| HTTP 401 | Token expired mid-session | Re-authenticate with `client.authenticate()` |
+| HTTP 400 | Invalid request parameters | Verify date format, purpose value, phone format (no dashes) |
